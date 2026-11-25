@@ -1,0 +1,357 @@
+﻿<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>旅遊分帳小幫手</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --teal-50:#f0fdfa;--teal-100:#ccfbf1;--teal-200:#99f6e4;--teal-400:#2dd4bf;
+      --teal-500:#14b8a6;--teal-600:#0d9488;--teal-700:#0f766e;--teal-800:#115e59;
+      --gray-50:#f9fafb;--gray-100:#f3f4f6;--gray-200:#e5e7eb;--gray-300:#d1d5db;
+      --gray-400:#9ca3af;--gray-500:#6b7280;--gray-600:#4b5563;--gray-700:#374151;
+      --gray-800:#1f2937;--gray-900:#111827;
+      --red-100:#fee2e2;--red-500:#ef4444;--red-600:#dc2626;
+      --amber-100:#fef3c7;--amber-600:#d97706;
+      --green-100:#dcfce7;--green-600:#16a34a;
+      --shadow-sm:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.06);
+      --shadow:0 4px 6px rgba(0,0,0,.07),0 2px 4px rgba(0,0,0,.06);
+      --shadow-lg:0 10px 15px rgba(0,0,0,.08),0 4px 6px rgba(0,0,0,.05);
+      --radius-sm:8px;--radius:12px;--radius-lg:16px;
+    }
+    body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang TC','Noto Sans TC',sans-serif; background:linear-gradient(135deg,#e0f7f4 0%,#d1fae5 50%,#e0f2fe 100%); min-height:100vh; color:var(--gray-800); line-height:1.5; }
+    .app-wrapper { max-width:480px; margin:0 auto; min-height:100vh; background:var(--gray-50); display:flex; flex-direction:column; box-shadow:0 0 40px rgba(0,0,0,.12); }
+    .header { background:linear-gradient(135deg,var(--teal-600) 0%,var(--teal-500) 100%); color:white; padding:16px 20px 20px; position:sticky; top:0; z-index:100; box-shadow:var(--shadow-lg); }
+    .header-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+    .header-title { font-size:18px; font-weight:700; letter-spacing:.5px; }
+    .header-emoji { font-size:22px; margin-right:6px; }
+    .reset-btn { background:rgba(255,255,255,.18); border:1px solid rgba(255,255,255,.35); color:white; border-radius:20px; padding:6px 12px; font-size:12px; cursor:pointer; transition:background .2s; }
+    .reset-btn:hover { background:rgba(255,255,255,.28); }
+    .stat-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+    .stat-card { background:rgba(255,255,255,.18); border:1px solid rgba(255,255,255,.25); border-radius:var(--radius-sm); padding:8px 10px; text-align:center; }
+    .stat-label { font-size:10px; opacity:.85; margin-bottom:2px; white-space:nowrap; }
+    .stat-value { font-size:15px; font-weight:700; }
+    .tab-nav { display:flex; background:white; border-bottom:2px solid var(--gray-200); position:sticky; top:112px; z-index:90; }
+    .tab-btn { flex:1; padding:12px 6px; border:none; background:none; font-size:12px; font-weight:600; color:var(--gray-500); cursor:pointer; transition:color .2s,border-color .2s; border-bottom:3px solid transparent; margin-bottom:-2px; display:flex; flex-direction:column; align-items:center; gap:2px; }
+    .tab-btn .tab-icon { font-size:18px; }
+    .tab-btn.active { color:var(--teal-600); border-bottom-color:var(--teal-500); }
+    .main { flex:1; padding:16px; display:flex; flex-direction:column; gap:16px; }
+    .section { display:none; }
+    .section.active { display:flex; flex-direction:column; gap:14px; }
+    .card { background:white; border-radius:var(--radius); padding:18px; box-shadow:var(--shadow-sm); border:1px solid var(--gray-200); }
+    .card-title { font-size:14px; font-weight:700; color:var(--gray-700); margin-bottom:14px; display:flex; align-items:center; gap:6px; }
+    .card-title-icon { font-size:16px; }
+    .form-group { display:flex; flex-direction:column; gap:5px; margin-bottom:12px; }
+    .form-group:last-child { margin-bottom:0; }
+    label { font-size:12px; font-weight:600; color:var(--gray-600); text-transform:uppercase; letter-spacing:.4px; }
+    input[type="text"],input[type="number"],select { width:100%; padding:11px 14px; border:1.5px solid var(--gray-300); border-radius:var(--radius-sm); font-size:15px; color:var(--gray-800); background:white; transition:border-color .2s,box-shadow .2s; outline:none; appearance:none; }
+    input:focus,select:focus { border-color:var(--teal-500); box-shadow:0 0 0 3px rgba(20,184,166,.12); }
+    input[type="number"] { -moz-appearance:textfield; }
+    input[type="number"]::-webkit-inner-spin-button,input[type="number"]::-webkit-outer-spin-button { -webkit-appearance:none; }
+    .input-wrap { position:relative; }
+    .input-prefix { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--gray-500); font-size:14px; font-weight:600; pointer-events:none; }
+    .input-wrap input { padding-left:36px; }
+    .btn { padding:12px 20px; border-radius:var(--radius-sm); font-size:14px; font-weight:600; cursor:pointer; border:none; transition:transform .15s,box-shadow .15s,background .15s; display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:46px; }
+    .btn:active { transform:scale(.97); }
+    .btn-primary { background:linear-gradient(135deg,var(--teal-500),var(--teal-600)); color:white; box-shadow:0 2px 8px rgba(14,165,153,.35); width:100%; }
+    .btn-primary:hover { box-shadow:0 4px 12px rgba(14,165,153,.45); }
+    .btn-secondary { background:var(--gray-100); color:var(--gray-700); border:1px solid var(--gray-300); }
+    .btn-secondary:hover { background:var(--gray-200); }
+    .btn-sm { padding:6px 12px; font-size:12px; min-height:32px; border-radius:6px; }
+    .btn-danger-sm { background:var(--red-100); color:var(--red-600); border:none; padding:4px 8px; font-size:12px; border-radius:6px; cursor:pointer; font-weight:600; transition:background .2s; min-height:28px; }
+    .btn-danger-sm:hover { background:#fecaca; }
+    .btn-row { display:flex; gap:8px; }
+    .chips-container { display:flex; flex-wrap:wrap; gap:8px; min-height:36px; }
+    .chip { display:inline-flex; align-items:center; gap:5px; background:var(--teal-100); color:var(--teal-700); border:1px solid var(--teal-200); border-radius:20px; padding:5px 12px 5px 10px; font-size:13px; font-weight:600; }
+    .chip-avatar { width:22px; height:22px; border-radius:50%; background:var(--teal-500); color:white; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; }
+    .chip-delete { background:none; border:none; color:var(--teal-600); cursor:pointer; font-size:15px; line-height:1; padding:0 0 0 2px; opacity:.7; transition:opacity .2s; }
+    .chip-delete:hover { opacity:1; }
+    .empty-hint { color:var(--gray-400); font-size:13px; font-style:italic; }
+    .add-member-row { display:flex; gap:8px; }
+    .add-member-row input { flex:1; }
+    .add-member-row .btn { width:auto; white-space:nowrap; }
+    .expense-list { display:flex; flex-direction:column; gap:10px; }
+    .expense-item { background:white; border:1px solid var(--gray-200); border-radius:var(--radius); padding:14px; display:flex; flex-direction:column; gap:8px; transition:box-shadow .2s; }
+    .expense-item:hover { box-shadow:var(--shadow); }
+    .expense-header { display:flex; justify-content:space-between; align-items:flex-start; }
+    .expense-name { font-size:15px; font-weight:700; color:var(--gray-800); }
+    .expense-amount { font-size:16px; font-weight:800; color:var(--teal-600); white-space:nowrap; }
+    .expense-meta { display:flex; flex-wrap:wrap; gap:6px; font-size:12px; }
+    .meta-badge { display:inline-flex; align-items:center; gap:3px; border-radius:6px; padding:3px 8px; font-weight:600; }
+    .meta-payer { background:var(--amber-100); color:var(--amber-600); }
+    .meta-splitters { background:var(--gray-100); color:var(--gray-600); }
+    .expense-footer { display:flex; justify-content:space-between; align-items:center; }
+    .per-person { font-size:12px; color:var(--gray-500); }
+    .checkbox-list { display:flex; flex-wrap:wrap; gap:8px; margin-top:4px; }
+    .checkbox-item { display:flex; align-items:center; gap:5px; cursor:pointer; }
+    .checkbox-item input[type="checkbox"] { width:16px; height:16px; cursor:pointer; accent-color:var(--teal-500); }
+    .checkbox-item span { font-size:13px; font-weight:500; color:var(--gray-700); }
+    .checkbox-controls { display:flex; gap:6px; margin-bottom:8px; }
+    .balance-grid { display:flex; flex-direction:column; gap:10px; }
+    .balance-row { display:flex; align-items:center; justify-content:space-between; padding:12px 14px; border-radius:var(--radius-sm); background:var(--gray-100); border:1px solid var(--gray-200); }
+    .balance-name { font-size:14px; font-weight:700; color:var(--gray-700); display:flex; align-items:center; gap:7px; }
+    .balance-name-avatar { width:28px; height:28px; border-radius:50%; background:var(--teal-500); color:white; font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .balance-amounts { display:flex; flex-direction:column; align-items:flex-end; gap:1px; }
+    .balance-net { font-size:15px; font-weight:800; }
+    .balance-net.positive { color:var(--green-600); }
+    .balance-net.negative { color:var(--red-600); }
+    .balance-net.zero { color:var(--gray-500); }
+    .balance-detail { font-size:11px; color:var(--gray-500); }
+    .transfer-list { display:flex; flex-direction:column; gap:10px; }
+    .transfer-card { background:linear-gradient(135deg,#fff7ed,#fef3c7); border:1px solid #fde68a; border-radius:var(--radius); padding:14px 16px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    .transfer-from { font-weight:700; color:var(--red-600); font-size:15px; }
+    .transfer-arrow { font-size:18px; flex-shrink:0; }
+    .transfer-to { font-weight:700; color:var(--green-600); font-size:15px; }
+    .transfer-amount { margin-left:auto; font-size:17px; font-weight:800; color:var(--gray-800); background:white; border-radius:var(--radius-sm); padding:4px 10px; border:1px solid var(--gray-200); white-space:nowrap; }
+    .all-settled { text-align:center; padding:30px 20px; color:var(--gray-500); }
+    .all-settled .settled-emoji { font-size:48px; margin-bottom:10px; }
+    .all-settled p { font-size:15px; font-weight:600; }
+    .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(80px); background:var(--gray-800); color:white; padding:12px 20px; border-radius:24px; font-size:13px; font-weight:600; z-index:999; transition:transform .35s cubic-bezier(.34,1.56,.64,1); white-space:nowrap; box-shadow:var(--shadow-lg); }
+    .toast.show { transform:translateX(-50%) translateY(0); }
+    .empty-state { text-align:center; padding:30px 16px; color:var(--gray-400); }
+    .empty-state .empty-icon { font-size:42px; margin-bottom:10px; }
+    .empty-state p { font-size:14px; line-height:1.6; }
+    .section-divider { display:flex; align-items:center; gap:10px; color:var(--gray-400); font-size:12px; font-weight:600; margin:4px 0; }
+    .section-divider::before,.section-divider::after { content:''; flex:1; height:1px; background:var(--gray-200); }
+    .badge-count { background:var(--teal-500); color:white; border-radius:10px; padding:1px 6px; font-size:11px; font-weight:700; }
+    @keyframes fadeInUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+    .expense-item,.chip,.transfer-card,.balance-row { animation:fadeInUp .25s ease both; }
+    @media(min-width:500px) { body{padding:20px 0} .app-wrapper{border-radius:24px;min-height:auto} }
+  </style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+<div class="app-wrapper">
+  <header class="header">
+    <div class="header-top">
+      <div class="header-title"><span class="header-emoji">✈️</span>旅遊分帳小幫手</div>
+      <button class="reset-btn" onclick="confirmReset()">🗑️ 清空資料</button>
+    </div>
+    <div class="stat-row">
+      <div class="stat-card"><div class="stat-label">👥 旅伴人數</div><div class="stat-value" id="stat-members">0</div></div>
+      <div class="stat-card"><div class="stat-label">📋 消費筆數</div><div class="stat-value" id="stat-expenses">0</div></div>
+      <div class="stat-card"><div class="stat-label">💰 總花費</div><div class="stat-value" id="stat-total">$0</div></div>
+    </div>
+  </header>
+  <nav class="tab-nav">
+    <button class="tab-btn active" id="tab-members" onclick="switchTab('members')"><span class="tab-icon">👥</span>成員管理</button>
+    <button class="tab-btn" id="tab-expenses" onclick="switchTab('expenses')"><span class="tab-icon">💳</span>消費明細</button>
+    <button class="tab-btn" id="tab-settlement" onclick="switchTab('settlement')"><span class="tab-icon">🧮</span>智能結算</button>
+  </nav>
+  <main class="main">
+    <!-- TAB 1 -->
+    <section class="section active" id="section-members">
+      <div class="card">
+        <div class="card-title"><span class="card-title-icon">➕</span>新增旅伴</div>
+        <div class="add-member-row">
+          <input type="text" id="member-input" placeholder="輸入旅伴姓名…" maxlength="20" onkeydown="if(event.key==='Enter')addMember()" />
+          <button class="btn btn-primary" style="width:auto;white-space:nowrap" onclick="addMember()">+ 新增成員</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="card-title-icon">🧳</span>旅伴名單 <span class="badge-count" id="member-count">0</span></div>
+        <div class="chips-container" id="member-chips"><span class="empty-hint">尚未新增任何旅伴</span></div>
+      </div>
+    </section>
+    <!-- TAB 2 -->
+    <section class="section" id="section-expenses">
+      <div class="card">
+        <div class="card-title"><span class="card-title-icon">📝</span>新增消費紀錄</div>
+        <div class="form-group">
+          <label for="exp-name">消費項目名稱</label>
+          <input type="text" id="exp-name" placeholder="例如：第一天晚餐、租車費…" maxlength="50" />
+        </div>
+        <div class="form-group">
+          <label for="exp-amount">金額</label>
+          <div class="input-wrap"><span class="input-prefix">NT$</span><input type="number" id="exp-amount" placeholder="0" min="0" step="0.01" /></div>
+        </div>
+        <div class="form-group">
+          <label for="exp-payer">付款人（代墊者）</label>
+          <select id="exp-payer"><option value="">—— 請先新增成員 ——</option></select>
+        </div>
+        <div class="form-group">
+          <label>分攤成員</label>
+          <div class="checkbox-controls">
+            <button class="btn btn-secondary btn-sm" onclick="selectAllSplitters(true)">✅ 全選</button>
+            <button class="btn btn-secondary btn-sm" onclick="selectAllSplitters(false)">☐ 取消全選</button>
+          </div>
+          <div class="checkbox-list" id="splitter-checkboxes"><span class="empty-hint">請先新增成員</span></div>
+        </div>
+        <button class="btn btn-primary" onclick="addExpense()">➕ 新增這筆花費</button>
+      </div>
+      <div class="section-divider">消費明細列表</div>
+      <div id="expense-list-container"></div>
+    </section>
+    <!-- TAB 3 -->
+    <section class="section" id="section-settlement">
+      <div class="card">
+        <div class="card-title"><span class="card-title-icon">📊</span>個人收支一覽</div>
+        <div class="balance-grid" id="balance-grid"></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="card-title-icon">💸</span>建議轉帳清單</div>
+        <div class="transfer-list" id="transfer-list"></div>
+        <div style="margin-top:14px">
+          <button class="btn btn-primary" onclick="copySettlement()">📋 一鍵複製結算結果</button>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<script>
+var members=[];var expenses=[];
+function saveData(){localStorage.setItem('ts_members',JSON.stringify(members));localStorage.setItem('ts_expenses',JSON.stringify(expenses));}
+function loadData(){var m=localStorage.getItem('ts_members');var e=localStorage.getItem('ts_expenses');if(m)members=JSON.parse(m);if(e)expenses=JSON.parse(e);}
+function loadDemoData(){
+  members=['小明','小華','美美'];
+  expenses=[
+    {id:'d1',name:'第一天晚餐',amount:1800,payer:'小明',splitters:['小明','小華','美美']},
+    {id:'d2',name:'景點門票',amount:900,payer:'美美',splitters:['小華','美美']}
+  ];
+  saveData();
+}
+function genId(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+function fmt(n){return 'NT$'+Math.round(n).toLocaleString('zh-TW');}
+function fmtAbs(n){return 'NT$'+Math.round(Math.abs(n)).toLocaleString('zh-TW');}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function escA(s){return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
+function showToast(msg){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},3000);}
+function switchTab(tab){
+  ['members','expenses','settlement'].forEach(function(t){
+    document.getElementById('tab-'+t).classList.toggle('active',t===tab);
+    document.getElementById('section-'+t).classList.toggle('active',t===tab);
+  });
+  if(tab==='settlement')renderSettlement();
+}
+function renderAll(){renderMembers();renderExpenses();renderPayerSelect();renderSplitterCheckboxes();renderStats();}
+function renderStats(){
+  var total=expenses.reduce(function(s,e){return s+e.amount;},0);
+  document.getElementById('stat-members').textContent=members.length;
+  document.getElementById('stat-expenses').textContent=expenses.length;
+  document.getElementById('stat-total').textContent='$'+Math.round(total).toLocaleString('zh-TW');
+}
+function renderMembers(){
+  var c=document.getElementById('member-chips');
+  document.getElementById('member-count').textContent=members.length;
+  if(!members.length){c.innerHTML='<span class="empty-hint">尚未新增任何旅伴</span>';return;}
+  c.innerHTML=members.map(function(m){return '<div class="chip"><div class="chip-avatar">'+esc(m.charAt(0))+'</div>'+esc(m)+'<button class="chip-delete" onclick="deleteMember(\''+escA(m)+'\')">✕</button></div>';}).join('');
+}
+function renderPayerSelect(){
+  var sel=document.getElementById('exp-payer');var prev=sel.value;
+  if(!members.length){sel.innerHTML='<option value="">—— 請先新增成員 ——</option>';return;}
+  sel.innerHTML=members.map(function(m){return '<option value="'+esc(m)+'"'+(m===prev?' selected':'')+'>'+esc(m)+'</option>';}).join('');
+}
+function renderSplitterCheckboxes(){
+  var c=document.getElementById('splitter-checkboxes');
+  if(!members.length){c.innerHTML='<span class="empty-hint">請先新增成員</span>';return;}
+  c.innerHTML=members.map(function(m){return '<label class="checkbox-item"><input type="checkbox" value="'+esc(m)+'" checked/><span>'+esc(m)+'</span></label>';}).join('');
+}
+function selectAllSplitters(val){document.querySelectorAll('#splitter-checkboxes input').forEach(function(cb){cb.checked=val;});}
+function renderExpenses(){
+  var c=document.getElementById('expense-list-container');
+  if(!expenses.length){c.innerHTML='<div class="empty-state"><div class="empty-icon">🧾</div><p>還沒有消費紀錄<br>在上方填寫後按「新增這筆花費」</p></div>';return;}
+  c.innerHTML='<div class="expense-list">'+expenses.slice().reverse().map(function(e){
+    var pp=e.splitters.length?e.amount/e.splitters.length:0;
+    return '<div class="expense-item"><div class="expense-header"><span class="expense-name">'+esc(e.name)+'</span><span class="expense-amount">'+fmt(e.amount)+'</span></div>'
+      +'<div class="expense-meta"><span class="meta-badge meta-payer">💳 '+esc(e.payer)+' 代墊</span><span class="meta-badge meta-splitters">👥 '+esc(e.splitters.join('、'))+'</span></div>'
+      +'<div class="expense-footer"><span class="per-person">每人分攤：'+fmtAbs(pp)+'（共 '+e.splitters.length+' 人）</span><button class="btn-danger-sm" onclick="deleteExpense(\''+escA(e.id)+'\')">🗑 刪除</button></div></div>';
+  }).join('')+'</div>';
+}
+function addMember(){
+  var input=document.getElementById('member-input');var name=input.value.trim();
+  if(!name){alert('請輸入旅伴姓名！');return;}
+  if(members.indexOf(name)>=0){alert('「'+name+'」已在成員名單中！');return;}
+  members.push(name);input.value='';saveData();renderAll();showToast('✅ 已新增旅伴「'+name+'」');
+}
+function deleteMember(name){
+  var linked=expenses.filter(function(e){return e.payer===name||e.splitters.indexOf(name)>=0;});
+  if(linked.length){if(!confirm('「'+name+'」有 '+linked.length+' 筆相關消費紀錄，刪除成員將一併移除這些紀錄，確定嗎？'))return;expenses=expenses.filter(function(e){return e.payer!==name&&e.splitters.indexOf(name)<0;});}
+  members=members.filter(function(m){return m!==name;});saveData();renderAll();showToast('已移除旅伴「'+name+'」');
+}
+function addExpense(){
+  var name=document.getElementById('exp-name').value.trim();
+  var amount=parseFloat(document.getElementById('exp-amount').value);
+  var payer=document.getElementById('exp-payer').value;
+  var checked=Array.from(document.querySelectorAll('#splitter-checkboxes input:checked')).map(function(cb){return cb.value;});
+  if(!name){alert('請填寫消費項目名稱！');return;}
+  if(isNaN(amount)||amount<=0){alert('請填寫正確的金額（大於 0）！');return;}
+  if(!payer){alert('請選擇付款人！');return;}
+  if(!checked.length){alert('請至少選擇一位分攤成員！');return;}
+  expenses.push({id:genId(),name:name,amount:amount,payer:payer,splitters:checked});
+  saveData();document.getElementById('exp-name').value='';document.getElementById('exp-amount').value='';selectAllSplitters(true);renderAll();showToast('✅ 已新增「'+name+'」消費紀錄');
+}
+function deleteExpense(id){if(!confirm('確定要刪除這筆消費紀錄嗎？'))return;expenses=expenses.filter(function(e){return e.id!==id;});saveData();renderAll();showToast('已刪除該筆消費紀錄');}
+function calcBalances(){
+  var paid={},owed={};
+  members.forEach(function(m){paid[m]=0;owed[m]=0;});
+  expenses.forEach(function(e){
+    paid[e.payer]=(paid[e.payer]||0)+e.amount;
+    var share=e.amount/e.splitters.length;
+    e.splitters.forEach(function(s){owed[s]=(owed[s]||0)+share;});
+  });
+  var net={};members.forEach(function(m){net[m]=(paid[m]||0)-(owed[m]||0);});
+  return {paid:paid,owed:owed,net:net};
+}
+function calcTransfers(net){
+  var creditors=[],debtors=[];
+  Object.keys(net).forEach(function(name){
+    var b=Math.round(net[name]*100)/100;
+    if(b>0.009)creditors.push({name:name,amount:b});
+    if(b<-0.009)debtors.push({name:name,amount:-b});
+  });
+  creditors.sort(function(a,b){return b.amount-a.amount;});
+  debtors.sort(function(a,b){return b.amount-a.amount;});
+  var transfers=[];
+  while(creditors.length&&debtors.length){
+    var c=creditors[0],d=debtors[0];
+    var amt=Math.min(c.amount,d.amount);
+    transfers.push({from:d.name,to:c.name,amount:Math.round(amt)});
+    c.amount=Math.round((c.amount-amt)*100)/100;
+    d.amount=Math.round((d.amount-amt)*100)/100;
+    if(c.amount<0.01)creditors.shift();
+    if(d.amount<0.01)debtors.shift();
+  }
+  return transfers;
+}
+function renderSettlement(){
+  if(!members.length){
+    document.getElementById('balance-grid').innerHTML='<div class="empty-state"><div class="empty-icon">👥</div><p>請先新增旅伴成員</p></div>';
+    document.getElementById('transfer-list').innerHTML='';return;
+  }
+  var r=calcBalances();var net=r.net;var paid=r.paid;var owed=r.owed;
+  document.getElementById('balance-grid').innerHTML=members.map(function(m){
+    var v=net[m]||0;var cls=v>0.009?'positive':v<-0.009?'negative':'zero';
+    var sign=v>0.009?'+':'';var label=v>0.009?'💰 應收回':v<-0.009?'💸 應支付':'✅ 已結清';
+    return '<div class="balance-row"><div class="balance-name"><div class="balance-name-avatar">'+esc(m.charAt(0))+'</div>'+esc(m)+'</div>'
+      +'<div class="balance-amounts"><span class="balance-net '+cls+'">'+sign+fmtAbs(v)+' '+label+'</span>'
+      +'<span class="balance-detail">代墊 '+fmtAbs(paid[m]||0)+' ｜ 分攤 '+fmtAbs(owed[m]||0)+'</span></div></div>';
+  }).join('');
+  var transfers=calcTransfers(net);var tl=document.getElementById('transfer-list');
+  if(!transfers.length){tl.innerHTML='<div class="all-settled"><div class="settled-emoji">🎉</div><p>所有帳目已結清，不需要任何轉帳！</p></div>';return;}
+  tl.innerHTML=transfers.map(function(t){return '<div class="transfer-card"><span class="transfer-from">💸 '+esc(t.from)+'</span><span class="transfer-arrow">➡️</span><span class="transfer-to">💰 '+esc(t.to)+'</span><span class="transfer-amount">NT$'+t.amount.toLocaleString('zh-TW')+'</span></div>';}).join('');
+}
+function copySettlement(){
+  if(!members.length){showToast('⚠️ 尚無資料可複製');return;}
+  var r=calcBalances();var net=r.net;var paid=r.paid;var owed=r.owed;
+  var transfers=calcTransfers(net);
+  var total=expenses.reduce(function(s,e){return s+e.amount;},0);
+  var text='✈️ 旅遊分帳結算結果\n'+'─'.repeat(26)+'\n';
+  text+='👥 旅伴：'+members.join('、')+'\n';
+  text+='💰 總花費：NT$'+Math.round(total).toLocaleString('zh-TW')+'\n\n';
+  text+='📊 個人收支\n';
+  members.forEach(function(m){var v=net[m]||0;var sign=v>=0?'+':'';text+='  '+m+'：'+sign+'NT$'+Math.round(Math.abs(v)).toLocaleString('zh-TW')+'（'+(v>=0?'應收':'應付')+'）\n';});
+  text+='\n💸 建議轉帳\n';
+  if(!transfers.length){text+='  🎉 所有帳目已結清，不需要轉帳！\n';}
+  else{transfers.forEach(function(t){text+='  '+t.from+' → '+t.to+'：NT$'+t.amount.toLocaleString('zh-TW')+'\n';});}
+  text+='\n（由旅遊分帳小幫手 ✈️ 自動計算）';
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(function(){showToast('✅ 已複製，可直接貼到 LINE 群組！');}).catch(function(){fallbackCopy(text);});
+  } else {fallbackCopy(text);}
+}
+function fallbackCopy(text){var ta=document.createElement('textarea');ta.value=text;ta.style.cssText='position:fixed;opacity:0;top:0;left:0';document.body.appendChild(ta);ta.focus();ta.select();try{document.execCommand('copy');showToast('✅ 已複製，可直接貼到 LINE 群組！');}catch(e){showToast('⚠️ 複製失敗，請手動複製');}document.body.removeChild(ta);}
+function confirmReset(){if(!confirm('⚠️ 確定要清空所有成員與消費紀錄嗎？\n此操作無法復原！'))return;if(!confirm('再次確認：所有資料將永久刪除，確定繼續？'))return;members=[];expenses=[];saveData();renderAll();switchTab('members');showToast('🗑️ 所有資料已清空');}
+(function init(){loadData();if(!members.length&&!expenses.length)loadDemoData();renderAll();})();
+</script>
+</body>
+</html>
